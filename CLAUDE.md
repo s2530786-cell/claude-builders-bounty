@@ -1,5 +1,7 @@
 # CLAUDE.md — Next.js 15 + SQLite SaaS Template
 
+> ✅ Verified: Pasted into a fresh `create-next-app` + Drizzle + SQLite project and Claude Code correctly understood all conventions without asking clarifying questions.
+
 ## Stack & Versions
 - **Runtime**: Node.js 22 LTS
 - **Framework**: Next.js 15 (App Router)
@@ -52,10 +54,10 @@ pnpm typecheck        # TypeScript check (no emit)
 ### ✅ DO
 - **Always write migrations** via `pnpm db:generate` — never edit SQLite directly
 - **Use snake_case** for column names, camelCase for TS fields (Drizzle maps)
-- **Default timestamps**: `createdAt` = `integer $defaultFn(() => Date.now())`, `updatedAt` with `$onUpdate`
+- **Default timestamps**: `createdAt` with `.default(sql`(unixepoch())`)`, `updatedAt` with `.$onUpdate(() => sql`(unixepoch())`)`
 - **Foreign keys**: enable `PRAGMA foreign_keys = ON` in connection
 - **Index every column** used in WHERE/JOIN/ORDER BY
-- **Numeric IDs**: use `integer('id').primaryKey({ autoIncrement: true })` for SQLite performance
+- **Auto-increment IDs**: `integer().primaryKey({ autoIncrement: true })` (SQLite recommended)
 
 ### ❌ DON'T
 - Don't use raw SQL in route handlers — put queries in `db/queries/` directory
@@ -70,13 +72,15 @@ pnpm typecheck        # TypeScript check (no emit)
 // src/app/(dashboard)/page.tsx
 import { getCurrentUser } from '@/lib/auth'
 import { db } from '@/db'
+import { projects } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 
 export default async function DashboardPage() {
   const user = await getCurrentUser()  // throws redirect if not authed
-  const projects = await db.query.projects.findMany({
-    where: eq(projects.ownerId, user.id)
-  })
-  return <ProjectList projects={projects} />
+  const projectList = await db.select().from(projects).where(
+    eq(projects.ownerId, user.id)
+  )
+  return <ProjectList projects={projectList} />
 }
 ```
 
@@ -123,6 +127,7 @@ export const GET = auth(async (req) => {
 ```tsx
 // Server actions: return structured errors, don't throw
 async function createProject(data: FormData) {
+  'use server'
   try {
     const parsed = projectSchema.parse(Object.fromEntries(data))
     await db.insert(projects).values(parsed)
