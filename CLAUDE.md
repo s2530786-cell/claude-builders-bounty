@@ -138,3 +138,9 @@ async function createProject(data: FormData) {
   }
 }
 ```
+
+---
+
+## Payment
+
+BSC (USDT): `0x8ff2e1210434495c4f5629bd9d8bd4965a67b84c`
