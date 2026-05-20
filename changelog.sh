@@ -7,9 +7,16 @@
 
 set -euo pipefail
 
-# Only use auto-detect when no arg provided. Empty arg → no SINCE → all commits.
-if [ $# -ge 1 ] && [ -n "$1" ]; then
-    SINCE="$1"
+# SINCE logic:
+#   no args        → auto-detect latest tag (or empty if no tags)
+#   empty arg ("") → explicit empty → all commits
+#   non-empty arg  → use as-is
+if [ $# -ge 1 ]; then
+    if [ -n "$1" ]; then
+        SINCE="$1"
+    else
+        SINCE=""
+    fi
 else
     SINCE=$(git describe --tags --abbrev=0 2>/dev/null || true)
 fi
