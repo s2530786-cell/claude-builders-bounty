@@ -7,7 +7,12 @@
 
 set -euo pipefail
 
-SINCE="${1:-$(git describe --tags --abbrev=0 2>/dev/null || echo '')}"
+# Only use auto-detect when no arg provided. Empty arg → no SINCE → all commits.
+if [ $# -ge 1 ] && [ -n "$1" ]; then
+    SINCE="$1"
+else
+    SINCE=$(git describe --tags --abbrev=0 2>/dev/null || true)
+fi
 UNTIL="${2:-HEAD}"
 OUTPUT="CHANGELOG.md"
 DATE=$(date +%Y-%m-%d)
@@ -30,7 +35,12 @@ fi
 echo "" >> "$OUTPUT"
 
 # Fetch commits (exclude merge commits)
-COMMITS=$(git log "${SINCE}..${UNTIL}" --pretty=format:"%s${SEP}%h${SEP}%an" --no-merges 2>/dev/null || git log --pretty=format:"%s${SEP}%h${SEP}%an" --no-merges)
+# Fix: empty SINCE → "..HEAD" returns 0 commits; use bare log when no SINCE
+if [ -n "$SINCE" ]; then
+    COMMITS=$(git log "${SINCE}..${UNTIL}" --pretty=format:"%s${SEP}%h${SEP}%an" --no-merges 2>/dev/null)
+else
+    COMMITS=$(git log --pretty=format:"%s${SEP}%h${SEP}%an" --no-merges)
+fi
 
 declare -A SECTIONS
 SECTIONS["Added"]=""
